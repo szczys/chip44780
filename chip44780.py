@@ -13,16 +13,19 @@
 
 
 # Pinout Definitions
-RS = "XIO-P0"
-RW = "XIO-P1"
-E = "XIO-P2"
+RS = "CSID0"
+RW = "CSID1"
+E = "CSID2"
 
-DB4 = "XIO-P4"
-DB5 = "XIO-P5"
-DB6 = "XIO-P6"
-DB7 = "XIO-P7"
+DB4 = "CSID4"
+DB5 = "CSID5"
+DB6 = "CSID6"
+DB7 = "CSID7"
 
-BACKLIGHT = "CSID0"
+BACKLIGHT = "CSID3"
+
+# Define number of characters on display (for scrolling function)
+COLUMNS = 8
 
 ### More Connection Info:
 # Newhaven Display 1x8
@@ -102,6 +105,12 @@ def setBus(binData):
     else:
         GPIO.output(DB7, 0)
 
+def backlight(lightOn):
+    if lightOn:
+        GPIO.output(BACKLIGHT,1)
+    else:
+        GPIO.output(BACKLIGHT,0)
+
 def sendCMD(binData):
     GPIO.output(RS, 0)  #Low to send command
     GPIO.output(RW, 0)
@@ -113,6 +122,10 @@ def sendDATA(binData):
     GPIO.output(RW, 0)
     setBus(binData)
     strobe()
+
+def clrScreen():
+    sendCMD(0b0000)
+    sendCMD(0b0001)
 
 def cursor(position):
     #This only works for a 1-line display
@@ -126,9 +139,11 @@ def putString(myString):
         sendDATA(binVal)
 
 def initLCD():
+    #NOTE: you need to switch backlight on using backlight(True) after running this function
+
+    
     sleep(0.1) # wait at least 40ms for CLCD powerup
     initIO()
-    GPIO.output(BACKLIGHT, 1)
     sendCMD(0b0011) #Wake
     sleep(0.01) # wait at least 4.1ms
     sendCMD(0b0011) #Wake 2
@@ -141,11 +156,29 @@ def initLCD():
     sendCMD(0b0001) #set cursor
     sendCMD(0b0000) #rest of set cursor
     sendCMD(0b0000) #display on
-    sendCMD(0b1111) #rest of display on
+    sendCMD(0b1100) #rest of display on
     sendCMD(0b0000) #entry mode set
     sendCMD(0b0110) #rest of entry mode set
 
+def scrollMsg(myString,delaySecs):
+    #pad string so message will scroll onto and off of the screen
+    myString = COLUMNS*" " + myString + COLUMNS*" "  #8 spaces for 1x8 LCD
+    for i in range(0,len(myString)-COLUMNS+1):
+        clrScreen()
+        putString(myString[i:i+COLUMNS])
+        sleep(delaySecs)
+                 
 initLCD()
 #TODO: Clear screen here (need to write function)
 cursor(0)
-putString("Aw Yeah!")
+
+'''
+while True:
+    clrScreen()
+    putString("Aw Yeah!")
+    sleep(1)
+    clrScreen()
+    putString("Sweet!")
+    sleep(1)
+    scrollMsg("This is a scrolling message",.3)
+''' 
